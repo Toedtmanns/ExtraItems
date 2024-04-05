@@ -13,7 +13,7 @@ namespace ExtraItems;
 
 [BepInPlugin(MyPluginInfo.PLUGIN_GUID, MyPluginInfo.PLUGIN_NAME, MyPluginInfo.PLUGIN_VERSION)]
 [BepInProcess("Content Warning.exe")]
-public class Plugin : BaseUnityPlugin
+public class ExtraItemsPlugin : BaseUnityPlugin
 {
     internal static new ManualLogSource Logger;
     private Harmony _harmony;
@@ -30,7 +30,6 @@ public class Plugin : BaseUnityPlugin
         // Plugin startup logic
         Logger.LogInfo($"Plugin {MyPluginInfo.PLUGIN_GUID} is loaded!");
         SceneManager.sceneLoaded += OnSceneLoaded;
-
         _harmony = Harmony.CreateAndPatchAll(Assembly.GetExecutingAssembly(), "Toedtmanns.ExtraItems");
     }
 
@@ -39,6 +38,7 @@ public class Plugin : BaseUnityPlugin
         if (_isInitialized)
             return;
 
+        PackageLoader _ = PackageLoader.Instance;
         _isInitialized = true;
 
         DivingBell = FindObjectOfType<DivingBell>();
@@ -60,12 +60,44 @@ public class Plugin : BaseUnityPlugin
     }
 }
 
+#if DEBUG
 [HarmonyPatch(typeof(SurfaceNetworkHandler), "InitSurface")]
 static class FillSavePatch
 {
     static void Postfix()
     {
-        Plugin.Logger.LogInfo("Adding many money to new run");
+        ExtraItemsPlugin.Logger.LogInfo("Adding money to new run");
         SurfaceNetworkHandler.RoomStats.AddMoney(1000000);
+    }
+}
+#endif
+
+[HarmonyPatch(typeof(ItemInstanceData), "GetEntryIdentifier")]
+static class EntryIdentifierPatch
+{
+    static Exception Finalizer(Exception __exception, ref byte __result, object[] __args)
+    {
+        Type arg = (Type) __args[0];
+        if (arg == typeof(SingleUseItemEntry))
+        {
+            __result = 9;
+            return null;
+        }
+        return __exception;
+    }
+}
+
+[HarmonyPatch(typeof(ItemInstanceData), "GetEntryType")]
+static class EntryTypePatch
+{
+    static Exception Finalizer(Exception __exception, ref ItemDataEntry __result, object[] __args)
+    {
+        byte arg = (byte) __args[0];
+        if (arg == 9)
+        {
+            __result = new SingleUseItemEntry();
+            return null;
+        }
+        return __exception;
     }
 }

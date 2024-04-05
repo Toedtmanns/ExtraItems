@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.Collections;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -17,6 +17,18 @@ namespace ExtraItems.items
         public override string ItemName => "Oxygen Tank";
         public override int Price => 50;
         public override ShopItemCategory ShopCategory => ShopItemCategory.Medical;
+        public override GameObject BaseObject
+        {
+            get
+            {
+                if (_baseObject == null)
+                {
+                    _baseObject = CustomItemManager.Instance.SetupBaseObject(PackageLoader.Instance.GetPrefab("OxygenTank"));
+                }
+                return _baseObject;
+            }
+        }
+        private GameObject _baseObject;
 
         protected override void ConfigCustomItem(ItemInstanceData data, Photon.Pun.PhotonView playerView)
         {
@@ -28,7 +40,7 @@ namespace ExtraItems.items
 
             if (data.TryGetEntry<SingleUseItemEntry>(out _itemState))
             {
-                Plugin.Logger.LogInfo($"Single use entry found with state: {_itemState.GetString()}");
+                ExtraItemsPlugin.Logger.LogInfo($"Single use entry found with state: {_itemState.GetString()}");
             }
             else
             {
@@ -39,12 +51,25 @@ namespace ExtraItems.items
 
         private void Update()
         {
-            if (!_itemState.wasUsed && isHeldByMe && Player.localPlayer.input.clickWasPressed && !Player.localPlayer.HasLockedInput() && !Plugin.DivingBell.onSurface)
+            if (isHeldByMe && !_itemState.wasUsed && Player.localPlayer.input.clickWasPressed && !Player.localPlayer.HasLockedInput() && Player.localPlayer.data.usingOxygen)
             {
-                Plugin.Logger.LogInfo($"Player '{Player.localPlayer.name}' refreshed their oxygen with a tank");
-                Player.localPlayer.data.remainingOxygen = Player.localPlayer.data.maxOxygen;
+                ExtraItemsPlugin.Logger.LogInfo($"Player '{Player.localPlayer.name}' refreshed their oxygen with a tank");
+                Player.localPlayer.StartCoroutine(ReOxidize());
                 _itemState.wasUsed = true;
             }
+        }
+
+        private IEnumerator ReOxidize()
+        {
+            float maxOxygen = Player.localPlayer.data.maxOxygen;
+            Player.localPlayer.data.usingOxygen = false;
+            while (Player.localPlayer.data.remainingOxygen < maxOxygen)
+            {
+                Player.localPlayer.data.remainingOxygen = Mathf.MoveTowards(Player.localPlayer.data.remainingOxygen, maxOxygen, 50.0f * Time.deltaTime);
+                yield return null;
+            }
+            Player.localPlayer.data.usingOxygen = true;
+            ExtraItemsPlugin.Logger.LogInfo("Oxygen refilled");
         }
     }
 }

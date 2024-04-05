@@ -50,7 +50,7 @@ namespace ExtraItems
 
         public sealed override void ConfigItem(ItemInstanceData data, Photon.Pun.PhotonView playerView)
         {
-            Plugin.Logger.LogInfo($"Configuring custom item '{itemInstance.item.displayName}'");
+            ExtraItemsPlugin.Logger.LogInfo($"Configuring custom item '{itemInstance.item.displayName}'");
             //itemInstance.item.itemObject.SetActive(true);
             itemInstance.transform.localScale = Vector3.one;
             ConfigCustomItem(data, playerView);
@@ -80,6 +80,8 @@ namespace ExtraItems
 
         private int _newItemID;
 
+        public Shader NiceShader { get; private set; }
+
         private CustomItemManager()
         {
             _newItemID = 0;
@@ -89,6 +91,21 @@ namespace ExtraItems
                     _newItemID = item.id;
             }
             _newItemID++;
+            NiceShader = Resources.FindObjectsOfTypeAll<Shader>().First((shader) => shader.name == "NiceShader");
+        }
+
+        public GameObject SetupBaseObject(GameObject @object)
+        {
+            GameObject baseObject = GameObject.Instantiate(@object);
+            GameObject.DontDestroyOnLoad(baseObject);
+            baseObject.AddComponent<ItemInstance>();
+            baseObject.transform.localScale = Vector3.zero;
+            baseObject.transform.GetChild(0).gameObject.AddComponent<HandGizmo>();
+            foreach (var mat in baseObject.GetComponentInChildren<MeshRenderer>().materials)
+            {
+                mat.shader = NiceShader;
+            }
+            return baseObject;
         }
 
         public Item CreateNewItem<T>(string itemName, int price = 100, ShopItemCategory shopCategory = ShopItemCategory.Gadgets) where T : ItemInstanceBehaviour
@@ -98,6 +115,7 @@ namespace ExtraItems
         public Item CreateNewItem(string itemName, Type instanceBehaviour, int price = 100, ShopItemCategory shopCategory = ShopItemCategory.Gadgets)
         {
             Item flareItem = SingletonAsset<ItemDatabase>.Instance.Objects.First((item) => item.id == 7);
+
             GameObject flareGO = GameObject.Instantiate(flareItem.itemObject);
             flareGO.name = $"_TEMPLATE_{itemName}";
             if (instanceBehaviour.InheritsFrom(typeof(CustomItem<>).GetGenericTypeDefinition()))
@@ -125,11 +143,11 @@ namespace ExtraItems
         {
             if (_newItemID > 255)
             {
-                Plugin.Logger.LogError("Cannot add another custom object. Object limit (256 Objects) reached");
+                ExtraItemsPlugin.Logger.LogError("Cannot add another custom object. Object limit (256 Objects) reached");
             }
             else if (!instanceBehaviour.InheritsFrom<ItemInstanceBehaviour>())
             {
-                Plugin.Logger.LogError($"Custom item '{itemName}' behaviour class '{instanceBehaviour.Name}' doesn't inherit from ItemInstanceBehaviour!");
+                ExtraItemsPlugin.Logger.LogError($"Custom item '{itemName}' behaviour class '{instanceBehaviour.Name}' doesn't inherit from ItemInstanceBehaviour!");
                 return null;
             }
 
@@ -155,7 +173,7 @@ namespace ExtraItems
         public static void RegisterItem(Item item)
         {
             SingletonAsset<ItemDatabase>.Instance.Objects = SingletonAsset<ItemDatabase>.Instance.Objects.AddItem(item).ToArray();
-            Plugin.Logger.LogInfo($"Custom item '{item.displayName}' was registered with ID {item.id}");
+            ExtraItemsPlugin.Logger.LogInfo($"Custom item '{item.displayName}' was registered with ID {item.id}");
         }
         public static bool IsSubclassOfRawGeneric(Type generic, Type toCheck)
         {
