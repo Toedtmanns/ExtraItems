@@ -34,7 +34,23 @@ namespace ExtraItems
         }
         private void LoadMainPackage()
         {
-            ExtraItemsBundle = AssetBundle.LoadFromFile(Utility.CombinePaths(PackagePath, "extraitemsbundle"));
+           try
+	            {
+		    this.ExtraItemsBundle = AssetBundle.LoadFromFile(Utility.CombinePaths(new string[]
+		    {
+			    this.PackagePath,
+			    "Toedtmanns-ExtraItems",
+			    "extraitemsbundle"
+		    }));
+	            }    
+	catch (Exception)
+	{
+		this.ExtraItemsBundle = AssetBundle.LoadFromFile(Utility.CombinePaths(new string[]
+		{
+			this.PackagePath,
+			"extraitemsbundle"
+		}));
+	}
         }
     }
 }
